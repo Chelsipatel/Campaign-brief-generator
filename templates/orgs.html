@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Organisation Profiles · Campaign Brief Generator</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f0; color: #1a1a2e; min-height: 100vh; padding: 2rem 1rem; }
+
+  .page-wrap { max-width: 960px; margin: 0 auto; }
+
+  .topbar { display: flex; align-items: center; gap: 1.25rem; margin-bottom: 2rem; }
+  .back-link { font-size: 0.85rem; color: #4F46E5; text-decoration: none; font-weight: 500; flex-shrink: 0; }
+  .back-link:hover { text-decoration: underline; }
+  .topbar h1 { font-size: 1.5rem; font-weight: 700; color: #1a1a2e; }
+
+  .panels { display: grid; grid-template-columns: 220px 1fr; gap: 1.5rem; align-items: start; }
+  @media (max-width: 640px) { .panels { grid-template-columns: 1fr; } }
+
+  .panel { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden; }
+  .panel-hdr {
+    padding: 0.9rem 1.25rem;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #4F46E5;
+  }
+
+  /* Org list */
+  .org-list { padding: 0.5rem; min-height: 80px; }
+  .org-item {
+    padding: 0.6rem 0.85rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: #374151;
+    transition: all 0.15s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .org-item:hover { background: #eef2ff; color: #4F46E5; }
+  .org-item.active { background: #4F46E5; color: #fff; font-weight: 600; }
+  .org-list-empty { padding: 1rem; font-size: 0.82rem; color: #9ca3af; text-align: center; }
+  .new-btn {
+    display: block;
+    width: calc(100% - 1rem);
+    margin: 0.5rem;
+    padding: 0.5rem;
+    border: 1.5px dashed #d1d5db;
+    border-radius: 8px;
+    background: none;
+    font-size: 0.82rem;
+    color: #6b7280;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .new-btn:hover { border-color: #4F46E5; color: #4F46E5; background: #eef2ff; }
+
+  /* Form */
+  .form-body { padding: 1.5rem; }
+  .field { margin-bottom: 1.1rem; }
+  label { display: block; font-size: 0.85rem; font-weight: 500; color: #374151; margin-bottom: 0.4rem; }
+  .req { color: #4F46E5; }
+  input[type="text"], textarea {
+    width: 100%;
+    padding: 0.6rem 0.85rem;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    color: #1a1a2e;
+    background: #fafafa;
+    transition: border-color 0.15s;
+    outline: none;
+  }
+  input[type="text"]:focus, textarea:focus { border-color: #4F46E5; background: #fff; }
+  textarea { resize: vertical; min-height: 80px; }
+  .field-hint { font-size: 0.78rem; color: #9ca3af; margin-top: 0.3rem; }
+
+  /* Past campaigns list */
+  .campaign-rows { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.5rem; }
+  .campaign-row { display: flex; gap: 0.5rem; align-items: center; }
+  .campaign-row input { flex: 1; }
+  .remove-btn {
+    padding: 0.55rem 0.7rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+    color: #9ca3af;
+    font-size: 1.1rem;
+    line-height: 1;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .remove-btn:hover { border-color: #dc2626; color: #dc2626; background: #fef2f2; }
+  .add-row-btn {
+    padding: 0.38rem 0.85rem;
+    border: 1.5px dashed #d1d5db;
+    border-radius: 8px;
+    background: none;
+    font-size: 0.82rem;
+    color: #6b7280;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .add-row-btn:hover { border-color: #4F46E5; color: #4F46E5; }
+
+  /* Footer */
+  .form-footer {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid #e5e7eb;
+    align-items: center;
+  }
+  .save-btn {
+    flex: 1;
+    padding: 0.75rem;
+    background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: opacity 0.15s;
+  }
+  .save-btn:hover { opacity: 0.9; }
+  .save-btn:disabled { background: #a5b4fc; cursor: not-allowed; }
+  .delete-btn {
+    padding: 0.75rem 1.1rem;
+    border: 1px solid #fca5a5;
+    border-radius: 8px;
+    background: #fff;
+    color: #dc2626;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .delete-btn:hover { background: #fef2f2; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 1.5rem; right: 1.5rem;
+    background: #1a1a2e; color: #fff;
+    font-size: 0.85rem;
+    padding: 0.65rem 1.1rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    transform: translateY(80px); opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    z-index: 200; pointer-events: none;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="page-wrap">
+  <div class="topbar">
+    <a href="/" class="back-link">← Back to generator</a>
+    <h1>Organisation Profiles</h1>
+  </div>
+
+  <div class="panels">
+
+    <!-- Left: org list -->
+    <div class="panel">
+      <div class="panel-hdr">Saved Profiles</div>
+      <div class="org-list" id="org-list">
+        <p class="org-list-empty">No profiles yet.</p>
+      </div>
+      <button class="new-btn" onclick="newProfile()">+ New profile</button>
+    </div>
+
+    <!-- Right: form -->
+    <div class="panel">
+      <div class="panel-hdr" id="form-title">New Profile</div>
+      <div class="form-body">
+
+        <div class="field">
+          <label>Organisation name <span class="req">*</span></label>
+          <input type="text" id="f-name" placeholder="e.g. GreenSprout">
+        </div>
+
+        <div class="field">
+          <label>Mission / cause</label>
+          <textarea id="f-mission" rows="3" placeholder="Describe the organisation's cause or mission in a sentence or two..."></textarea>
+        </div>
+
+        <div class="field">
+          <label>Brand voice</label>
+          <input type="text" id="f-brand-voice" placeholder="e.g. Warm, hopeful, community-centred">
+          <p class="field-hint">Used to shape the tone of each campaign brief.</p>
+        </div>
+
+        <div class="field">
+          <label>Target audience</label>
+          <input type="text" id="f-audience" placeholder="e.g. Parents and teachers in urban areas, aged 28–45">
+        </div>
+
+        <div class="field">
+          <label>Past campaigns</label>
+          <p class="field-hint" style="margin-bottom:0.5rem;">Claude will avoid repeating these ideas or approaches.</p>
+          <div class="campaign-rows" id="campaign-rows"></div>
+          <button class="add-row-btn" onclick="addCampaignRow()">+ Add campaign</button>
+        </div>
+
+        <div class="form-footer">
+          <button class="save-btn" id="save-btn" onclick="saveProfile()">Save profile</button>
+          <button class="delete-btn" id="delete-btn" style="display:none;" onclick="deleteProfile()">Delete</button>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  let currentId = null;
+  let orgs = [];
+
+  async function loadOrgs() {
+    try {
+      const res = await fetch('/orgs');
+      orgs = await res.json();
+      renderList();
+    } catch (e) {}
+  }
+
+  function renderList() {
+    const list = document.getElementById('org-list');
+    if (!orgs.length) {
+      list.innerHTML = '<p class="org-list-empty">No profiles yet.</p>';
+      return;
+    }
+    list.innerHTML = '';
+    orgs.forEach(org => {
+      const item = document.createElement('div');
+      item.className = 'org-item' + (org.id === currentId ? ' active' : '');
+      item.textContent = org.name;
+      item.title = org.name;
+      item.addEventListener('click', () => loadProfile(org));
+      list.appendChild(item);
+    });
+  }
+
+  function loadProfile(org) {
+    currentId = org.id;
+    document.getElementById('form-title').textContent = 'Edit Profile';
+    document.getElementById('f-name').value           = org.name            || '';
+    document.getElementById('f-mission').value        = org.mission         || '';
+    document.getElementById('f-brand-voice').value    = org.brand_voice     || '';
+    document.getElementById('f-audience').value       = org.target_audience || '';
+    renderCampaignRows(Array.isArray(org.past_campaigns) ? org.past_campaigns : []);
+    document.getElementById('delete-btn').style.display = 'inline-block';
+    renderList();
+  }
+
+  function newProfile() {
+    currentId = null;
+    document.getElementById('form-title').textContent = 'New Profile';
+    document.getElementById('f-name').value        = '';
+    document.getElementById('f-mission').value     = '';
+    document.getElementById('f-brand-voice').value = '';
+    document.getElementById('f-audience').value    = '';
+    renderCampaignRows([]);
+    document.getElementById('delete-btn').style.display = 'none';
+    renderList();
+    document.getElementById('f-name').focus();
+  }
+
+  function renderCampaignRows(campaigns) {
+    const rows = document.getElementById('campaign-rows');
+    rows.innerHTML = '';
+    campaigns.forEach(c => addCampaignRow(c));
+  }
+
+  function addCampaignRow(value = '') {
+    const rows = document.getElementById('campaign-rows');
+    const row  = document.createElement('div');
+    row.className = 'campaign-row';
+
+    const input = document.createElement('input');
+    input.type        = 'text';
+    input.placeholder = 'e.g. Summer Volunteer Drive 2024';
+    input.value       = value;
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className   = 'remove-btn';
+    removeBtn.textContent = '×';
+    removeBtn.setAttribute('aria-label', 'Remove');
+    removeBtn.addEventListener('click', () => row.remove());
+
+    row.appendChild(input);
+    row.appendChild(removeBtn);
+    rows.appendChild(row);
+    if (!value) input.focus();
+  }
+
+  function getCampaigns() {
+    return [...document.querySelectorAll('.campaign-row input')]
+      .map(i => i.value.trim())
+      .filter(Boolean);
+  }
+
+  async function saveProfile() {
+    const name = document.getElementById('f-name').value.trim();
+    if (!name) {
+      document.getElementById('f-name').focus();
+      showToast('Organisation name is required');
+      return;
+    }
+
+    const payload = {
+      name,
+      mission:         document.getElementById('f-mission').value.trim(),
+      brand_voice:     document.getElementById('f-brand-voice').value.trim(),
+      target_audience: document.getElementById('f-audience').value.trim(),
+      past_campaigns:  getCampaigns(),
+    };
+
+    const btn = document.getElementById('save-btn');
+    btn.disabled    = true;
+    btn.textContent = 'Saving...';
+
+    try {
+      const res  = await fetch(currentId ? `/orgs/${currentId}` : '/orgs', {
+        method:  currentId ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!currentId && data.id) currentId = data.id;
+      await loadOrgs();
+      document.getElementById('form-title').textContent           = 'Edit Profile';
+      document.getElementById('delete-btn').style.display = 'inline-block';
+      showToast('Profile saved');
+    } catch (e) {
+      showToast('Failed to save — check the server is running');
+    }
+
+    btn.disabled    = false;
+    btn.textContent = 'Save profile';
+  }
+
+  async function deleteProfile() {
+    if (!currentId) return;
+    if (!confirm('Delete this profile? This cannot be undone.')) return;
+    try {
+      await fetch(`/orgs/${currentId}`, { method: 'DELETE' });
+      currentId = null;
+      await loadOrgs();
+      newProfile();
+      showToast('Profile deleted');
+    } catch (e) {
+      showToast('Failed to delete');
+    }
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  loadOrgs();
+</script>
+</body>
+</html>

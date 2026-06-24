@@ -1,0 +1,1868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Campaign Brief Generator</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f5f5f0;
+    color: #1a1a2e;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+  }
+
+  /* Background blobs */
+  .blob {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: 0.13;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .blob-1 { width: 520px; height: 520px; background: #4F46E5; top: -180px; left: -160px; animation: blob-drift-1 18s ease-in-out infinite; }
+  .blob-2 { width: 420px; height: 420px; background: #7C3AED; top: -120px; right: -120px; animation: blob-drift-2 22s ease-in-out infinite; }
+  .blob-3 { width: 480px; height: 480px; background: #0D9488; bottom: -160px; right: -120px; animation: blob-drift-3 15s ease-in-out infinite; }
+
+  .container { flex: 1; min-width: 0; position: relative; z-index: 1; }
+
+  @keyframes gradient-shift {
+    0%, 100% { background-position: 0% 50%; }
+    50%       { background-position: 100% 50%; }
+  }
+  @keyframes blob-drift-1 {
+    0%, 100% { transform: translate(0,0) scale(1); }
+    33%       { transform: translate(28px,-18px) scale(1.05); }
+    66%       { transform: translate(-18px,14px) scale(0.97); }
+  }
+  @keyframes blob-drift-2 {
+    0%, 100% { transform: translate(0,0) scale(1); }
+    33%       { transform: translate(-22px,18px) scale(0.95); }
+    66%       { transform: translate(18px,-14px) scale(1.04); }
+  }
+  @keyframes blob-drift-3 {
+    0%, 100% { transform: translate(0,0) scale(1); }
+    33%       { transform: translate(14px,22px) scale(1.03); }
+    66%       { transform: translate(-26px,-10px) scale(0.97); }
+  }
+
+  header { margin-bottom: 2rem; }
+  header h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #4F46E5, #7C3AED, #0D9488, #4F46E5);
+    background-size: 300% 300%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gradient-shift 6s ease infinite;
+  }
+  header p { color: #6b7280; margin-top: 0.4rem; font-size: 0.95rem; }
+
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    padding: 1.75rem;
+    margin-bottom: 1.25rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(79, 70, 229, 0.09);
+  }
+
+  .card h2 {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #4F46E5;
+    margin-bottom: 1.25rem;
+  }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media (max-width: 560px) { .form-row { grid-template-columns: 1fr; } }
+
+  .field { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1rem; }
+  .field:last-child { margin-bottom: 0; }
+
+  label { font-size: 0.85rem; font-weight: 500; color: #374151; }
+
+  input[type="text"], textarea, select {
+    width: 100%;
+    padding: 0.6rem 0.85rem;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    color: #1a1a2e;
+    background: #fafafa;
+    transition: border-color 0.15s;
+    outline: none;
+  }
+  input[type="text"]:focus, textarea:focus, select:focus {
+    border-color: #4F46E5;
+    background: #fff;
+  }
+  textarea { resize: vertical; min-height: 72px; }
+
+  .platforms { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+  .platform-btn {
+    padding: 0.4rem 0.9rem;
+    border: 1px solid #d1d5db;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    cursor: pointer;
+    background: #fafafa;
+    color: #374151;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .platform-btn.selected {
+    background: #4F46E5;
+    border-color: #4F46E5;
+    color: #fff;
+  }
+
+  /* Org profile bar */
+  .org-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 0.7rem 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+  .org-bar-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #6b7280;
+    white-space: nowrap;
+  }
+  .org-bar select {
+    flex: 1;
+    min-width: 0;
+    padding: 0.38rem 0.6rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-family: inherit;
+    color: #1a1a2e;
+    background: #fafafa;
+    outline: none;
+    cursor: pointer;
+  }
+  .org-bar select:focus { border-color: #4F46E5; }
+  .org-bar-link {
+    font-size: 0.8rem;
+    color: #4F46E5;
+    text-decoration: none;
+    white-space: nowrap;
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+  .org-bar-link:hover { text-decoration: underline; }
+
+  /* Actions row */
+  .actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+  }
+
+  .generate-btn {
+    flex: 1;
+    padding: 0.85rem;
+    background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+  .generate-btn::after {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 60%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+    transition: left 0.45s ease;
+  }
+  .generate-btn:hover { opacity: 0.9; }
+  .generate-btn:hover::after { left: 150%; }
+  .generate-btn:disabled { background: #a5b4fc; cursor: not-allowed; }
+  .generate-btn:disabled::after { display: none; }
+
+  .example-btn {
+    padding: 0.85rem 1.25rem;
+    background: #fff;
+    color: #4F46E5;
+    border: 1px solid #4F46E5;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .example-btn:hover { background: #eef2ff; }
+
+  /* History panel */
+  .history-panel {
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    padding: 1.25rem 1.75rem;
+    margin-top: 1.25rem;
+  }
+  .history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+  }
+  .history-header span {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #4F46E5;
+  }
+  .history-clear {
+    font-size: 0.78rem;
+    color: #9ca3af;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+  }
+  .history-clear:hover { color: #6b7280; }
+  .history-list { display: flex; flex-direction: column; gap: 0.5rem; }
+  .history-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 0.85rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: #fafafa;
+  }
+  .history-item:hover { border-color: #4F46E5; background: #eef2ff; }
+  .history-item-name {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #1a1a2e;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 65%;
+  }
+  .history-item-date { font-size: 0.78rem; color: #9ca3af; }
+
+  /* Result card */
+  .result-card {
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    padding: 1.75rem;
+    display: none;
+    margin-top: 1.25rem;
+  }
+  .result-card.visible { display: block; }
+
+  .result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.25rem;
+  }
+  .result-header h2 {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #4F46E5;
+  }
+  .result-header-right { display: flex; align-items: center; gap: 0.75rem; }
+  .result-actions { display: flex; gap: 0.5rem; }
+  .word-count-badge {
+    font-size: 0.72rem;
+    color: #9ca3af;
+    background: #f3f4f6;
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
+    display: none;
+  }
+  .word-count-badge.visible { display: inline-block; }
+  .copy-btn, .export-btn {
+    font-size: 0.8rem;
+    padding: 0.35rem 0.85rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+    color: #374151;
+    transition: all 0.15s;
+  }
+  .copy-btn:hover, .export-btn:hover { background: #f3f4f6; }
+
+  #brief-output {
+    font-size: 0.9rem;
+    line-height: 1.75;
+    color: #1a1a2e;
+  }
+  #brief-output p { margin-bottom: 0.5rem; }
+  #brief-output p.bullet,
+  #brief-output p.numbered { padding-left: 1rem; }
+  #brief-output h2 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin: 1.25rem 0 0.4rem;
+    text-transform: none;
+    letter-spacing: normal;
+    border-left: 3px solid #4F46E5;
+    padding-left: 0.65rem;
+  }
+  #brief-output h2:first-child { margin-top: 0; }
+
+  /* Brief document header */
+  .brief-doc-header {
+    background: linear-gradient(135deg, #f5f3ff 0%, #eef2ff 100%);
+    border-radius: 10px;
+    padding: 1.1rem 1.4rem;
+    margin-bottom: 1.5rem;
+    border-left: 4px solid #4F46E5;
+  }
+  .brief-doc-org { font-size: 1.15rem; font-weight: 700; color: #1a1a2e; margin-bottom: 0.4rem; }
+  .brief-doc-meta { display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap; margin-bottom: 0.3rem; }
+  .brief-doc-tone {
+    font-size: 0.72rem; font-weight: 600;
+    background: #4F46E5; color: #fff;
+    padding: 0.18rem 0.6rem; border-radius: 20px;
+  }
+  .brief-doc-date { font-size: 0.78rem; color: #6b7280; }
+  .brief-doc-platforms { font-size: 0.78rem; color: #9ca3af; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 1.5rem; right: 1.5rem;
+    background: #1a1a2e; color: #fff;
+    font-size: 0.85rem;
+    padding: 0.65rem 1.1rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    transform: translateY(80px);
+    opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    z-index: 200;
+    pointer-events: none;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  #brief-output h3 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #374151;
+    margin: 1rem 0 0.3rem;
+  }
+
+  .loading {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #6b7280;
+    font-size: 0.9rem;
+    padding: 1rem 0;
+  }
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid #e5e7eb;
+    border-top-color: #4F46E5;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error { color: #dc2626; font-size: 0.88rem; padding: 0.75rem 0; }
+
+  /* Remix section */
+  .remix-section {
+    margin-top: 1.75rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e5e7eb;
+  }
+  .remix-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #6b7280;
+    margin-bottom: 1rem;
+  }
+  .remix-group { margin-bottom: 0.85rem; }
+  .remix-group:last-child { margin-bottom: 0; }
+  .remix-group-label {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    margin-bottom: 0.45rem;
+  }
+  .remix-chips { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+  .remix-chip {
+    padding: 0.35rem 0.85rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    border: 1px solid #d1d5db;
+    background: #fafafa;
+    color: #374151;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .remix-chip.tone-chip:hover,
+  .remix-chip.tone-chip.active {
+    border-color: #4F46E5;
+    color: #4F46E5;
+    background: #eef2ff;
+  }
+remix-chip.tone-chip.active { font-weight: 600; }
+  .remix-chip.style-chip:hover,
+  .remix-chip.style-chip.active {
+    border-color: #7C3AED;
+    color: #7C3AED;
+    background: #f5f3ff;
+  }
+  .remix-chip.style-chip.active { font-weight: 600; }
+  .remix-chip:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Resources / Related content */
+  .resources-card {
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    padding: 1.75rem;
+    margin-top: 1.25rem;
+    display: none;
+  }
+  .resources-card.visible { display: block; }
+  .resources-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #4F46E5;
+    margin-bottom: 1.25rem;
+  }
+  .suggest-loading { font-size: 0.85rem; color: #9ca3af; margin-bottom: 1.25rem; }
+  .platform-section { margin-bottom: 1.1rem; }
+  .platform-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #9ca3af;
+    margin-bottom: 0.45rem;
+  }
+  .suggest-chips { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+  .suggest-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.38rem 0.85rem;
+    border: 1px solid #d1d5db;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    color: #374151;
+    background: #fafafa;
+    text-decoration: none;
+    transition: all 0.15s;
+  }
+  .chip-prefix { font-size: 0.62rem; opacity: 0.55; }
+  .suggest-chip.yt:hover  { border-color: #dc2626; color: #dc2626; background: #fef2f2; }
+  .suggest-chip.news:hover { border-color: #2563eb; color: #2563eb; background: #eff6ff; }
+  .suggest-chip.hash:hover { border-color: #0d9488; color: #0d9488; background: #f0fdfa; }
+  .resources-divider {
+    border: none;
+    border-top: 1px solid #e5e7eb;
+    margin: 1.25rem 0;
+  }
+
+  .video-section-label {
+    font-size: 0.82rem;
+    color: #6b7280;
+    margin-bottom: 0.6rem;
+  }
+  .video-add-row { display: flex; gap: 0.6rem; margin-bottom: 1rem; }
+  .video-url-input {
+    flex: 1;
+    padding: 0.6rem 0.85rem;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    color: #1a1a2e;
+    background: #fafafa;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .video-url-input:focus { border-color: #4F46E5; background: #fff; }
+  .video-add-btn {
+    padding: 0.6rem 1.1rem;
+    background: #4F46E5;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+    white-space: nowrap;
+  }
+  .video-add-btn:hover { background: #4338ca; }
+
+  .video-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1rem;
+  }
+  .video-item { position: relative; border-radius: 10px; overflow: hidden; border: 1px solid #e5e7eb; background: #000; }
+  .video-embed { position: relative; padding-bottom: 56.25%; height: 0; }
+  .video-embed iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
+  .video-remove {
+    position: absolute; top: 6px; right: 6px; z-index: 10;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: rgba(0,0,0,0.55); color: #fff; border: none;
+    cursor: pointer; font-size: 15px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+  }
+  .video-remove:hover { background: rgba(220,38,38,0.85); }
+
+  /* Social visuals */
+  .visuals-card {
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    padding: 1.75rem;
+    margin-top: 1.25rem;
+    display: none;
+  }
+  .visuals-card.visible { display: block; }
+  .visuals-hdr { margin-bottom: 1.25rem; }
+  .visuals-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #4F46E5;
+    display: block;
+    margin-bottom: 0.3rem;
+  }
+  .visuals-sub { font-size: 0.85rem; color: #6b7280; }
+  .visuals-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+  }
+  .visual-item {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #fafafa;
+  }
+  .visual-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #6b7280;
+    padding: 0.55rem 0.85rem;
+    border-bottom: 1px solid #e5e7eb;
+    background: #fff;
+  }
+  .visual-img-wrap {
+    position: relative;
+    padding-bottom: 56.25%;
+    background: #f3f4f6;
+    overflow: hidden;
+  }
+  .visual-spinner-wrap {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .visual-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .visual-error { font-size: 0.78rem; color: #9ca3af; }
+  .visual-dl-btn {
+    display: block;
+    width: 100%;
+    padding: 0.5rem;
+    font-size: 0.8rem;
+    font-family: inherit;
+    font-weight: 500;
+    border: none;
+    border-top: 1px solid #e5e7eb;
+    background: #fff;
+    color: #374151;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .visual-dl-btn:hover { background: #f3f4f6; }
+
+  /* Print / PDF export */
+  @media print {
+    .blob, header, .card, .actions, .history-panel, .sidebar, .persona-section,
+    .copy-btn, .export-btn, .remix-section, .resources-card, .visuals-card { display: none !important; }
+    body { background: #fff; padding: 0; }
+    .container { max-width: 100%; }
+    .result-card { display: block !important; border: none; padding: 0; margin: 0; }
+    .result-header { margin-bottom: 1.5rem; }
+    .result-header h2 { font-size: 1.1rem; text-transform: none; letter-spacing: normal; color: #1a1a2e; }
+    #brief-output { font-size: 11pt; }
+  }
+
+  /* Sidebar layout */
+  .page-layout {
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-start;
+    max-width: 1080px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+  .sidebar {
+    width: 240px;
+    flex-shrink: 0;
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    position: sticky;
+    top: 2rem;
+    max-height: calc(100vh - 4rem);
+    overflow-y: auto;
+  }
+  .sidebar-hdr {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem 0.75rem;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .sidebar-hdr span {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #4F46E5;
+  }
+  .sidebar-refresh {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #9ca3af;
+    font-size: 1rem;
+    padding: 0;
+    line-height: 1;
+    transition: color 0.15s;
+  }
+  .sidebar-refresh:hover { color: #4F46E5; }
+  .sidebar-list { padding: 0.75rem; display: flex; flex-direction: column; gap: 0.4rem; }
+  .sidebar-empty { font-size: 0.82rem; color: #9ca3af; text-align: center; padding: 1rem 0; }
+  .sidebar-item {
+    padding: 0.6rem 0.75rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    cursor: pointer;
+    background: #fafafa;
+    transition: all 0.15s;
+  }
+  .sidebar-item:hover { border-color: #4F46E5; background: #eef2ff; }
+  .sidebar-item-name {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #1a1a2e;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sidebar-item-date { font-size: 0.75rem; color: #9ca3af; margin-top: 0.15rem; }
+  @media (max-width: 720px) {
+    .page-layout { flex-direction: column; }
+    .sidebar { width: 100%; position: static; max-height: none; }
+  }
+
+  /* Persona section */
+  .persona-section {
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    padding: 1.75rem;
+    margin-bottom: 1.25rem;
+  }
+  .persona-section-hdr { margin-bottom: 1.25rem; }
+  .persona-section-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #4F46E5;
+    display: block;
+    margin-bottom: 0.3rem;
+  }
+  .persona-section-sub { font-size: 0.85rem; color: #6b7280; }
+  .persona-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+  }
+  @media (max-width: 560px) { .persona-cards { grid-template-columns: 1fr; } }
+  .persona-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 1.25rem;
+    background: linear-gradient(135deg, #f5f3ff 0%, #eef2ff 100%);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .persona-card:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(79,70,229,0.09); }
+  .persona-avatar {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 0.75rem;
+  }
+  .persona-name { font-size: 1rem; font-weight: 700; color: #1a1a2e; margin-bottom: 0.85rem; }
+  .persona-field { margin-bottom: 0.6rem; }
+  .persona-field:last-child { margin-bottom: 0; }
+  .persona-label {
+    font-size: 0.68rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    color: #6b7280; display: block; margin-bottom: 0.2rem;
+  }
+  .persona-value { font-size: 0.84rem; color: #374151; line-height: 1.5; }
+  .persona-actions { display: flex; gap: 0.75rem; }
+
+  /* Tweak section */
+  .tweak-section {
+    margin-top: 1.75rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e5e7eb;
+  }
+  .tweak-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #6b7280;
+    margin-bottom: 0.85rem;
+  }
+  .tweak-buttons { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem; }
+  .tweak-btn {
+    padding: 0.4rem 0.9rem;
+    border: 1px solid #d1d5db;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-family: inherit;
+    cursor: pointer;
+    background: #fafafa;
+    color: #374151;
+    transition: all 0.15s;
+  }
+  .tweak-btn:hover { border-color: #0D9488; color: #0D9488; background: #f0fdfa; }
+  .tweak-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .undo-btn {
+    font-size: 0.8rem;
+    padding: 0.35rem 0.85rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: #fff;
+    font-family: inherit;
+    cursor: pointer;
+    color: #374151;
+    transition: all 0.15s;
+  }
+  .undo-btn:hover { background: #f3f4f6; }
+</style>
+</head>
+<body>
+
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+<div class="blob blob-3"></div>
+
+<div class="page-layout">
+
+<aside class="sidebar" id="db-sidebar">
+  <div class="sidebar-hdr">
+    <span>Saved Briefs</span>
+    <button class="sidebar-refresh" onclick="loadDbHistory()" title="Refresh">↻</button>
+  </div>
+  <div class="sidebar-list" id="db-history-list">
+    <p class="sidebar-empty">No saved briefs yet.</p>
+  </div>
+</aside>
+
+<div class="container">
+
+  <header>
+    <h1>Campaign Brief Generator</h1>
+    <p>Powered by Claude · Built for nonprofits and social impact organisations</p>
+  </header>
+
+  <div class="org-bar">
+    <span class="org-bar-label">Org profile</span>
+    <select id="org-select" onchange="loadOrgProfile()">
+      <option value="">— Select to auto-fill —</option>
+    </select>
+    <a href="/orgs-page" class="org-bar-link">Manage profiles →</a>
+  </div>
+
+  <div class="card">
+    <h2>About your organisation</h2>
+    <div class="form-row">
+      <div class="field">
+        <label for="org_name">Organisation name</label>
+        <input type="text" id="org_name" placeholder="e.g. WeMakeChange">
+      </div>
+      <div class="field">
+        <label for="goal">Campaign goal</label>
+        <input type="text" id="goal" placeholder="e.g. Raise awareness, increase donations">
+      </div>
+    </div>
+    <div class="field">
+      <label for="cause">Cause / mission</label>
+      <textarea id="cause" placeholder="Describe your cause in a sentence or two..."></textarea>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Audience & tone</h2>
+    <div class="form-row">
+      <div class="field">
+        <label for="audience">Target audience</label>
+        <input type="text" id="audience" placeholder="e.g. Young professionals aged 20-35">
+      </div>
+      <div class="field">
+        <label for="tone">Tone of voice</label>
+        <select id="tone">
+          <option value="">Select a tone...</option>
+          <option value="Inspiring and hopeful">Inspiring & hopeful</option>
+          <option value="Urgent and direct">Urgent & direct</option>
+          <option value="Warm and community-focused">Warm & community-focused</option>
+          <option value="Educational and informative">Educational & informative</option>
+          <option value="Bold and activist">Bold & activist</option>
+          <option value="Conversational and friendly">Conversational & friendly</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Platforms</h2>
+    <div class="platforms" id="platforms">
+      <div class="platform-btn" data-platform="Instagram">Instagram</div>
+      <div class="platform-btn" data-platform="LinkedIn">LinkedIn</div>
+      <div class="platform-btn" data-platform="Twitter / X">Twitter / X</div>
+      <div class="platform-btn" data-platform="Facebook">Facebook</div>
+      <div class="platform-btn" data-platform="Email newsletter">Email newsletter</div>
+      <div class="platform-btn" data-platform="TikTok">TikTok</div>
+      <div class="platform-btn" data-platform="Website / Blog">Website / Blog</div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="example-btn" onclick="prefill()">Try an example</button>
+    <button class="generate-btn" id="generate-btn" onclick="startGenerate()">Generate campaign brief</button>
+  </div>
+
+  <div id="persona-section" class="persona-section" style="display:none;">
+    <div id="persona-loading" class="loading">
+      <div class="spinner"></div> Building audience personas...
+    </div>
+    <div id="persona-content" style="display:none;">
+      <div class="persona-section-hdr">
+        <span class="persona-section-title">Audience Personas</span>
+        <p class="persona-section-sub">Based on your target audience · Used to shape the brief</p>
+      </div>
+      <div class="persona-cards" id="persona-cards"></div>
+      <div class="persona-actions">
+        <button class="generate-btn" onclick="generateWithPersonas()">Generate brief with these personas</button>
+        <button class="example-btn" onclick="skipPersonas()">Skip personas</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="history-panel" class="history-panel" style="display:none;">
+    <div class="history-header">
+      <span>Recent briefs</span>
+      <button class="history-clear" onclick="clearHistory()">Clear all</button>
+    </div>
+    <div class="history-list" id="history-list"></div>
+  </div>
+
+  <div class="result-card" id="result-card">
+    <div class="result-header">
+      <h2>Your campaign brief</h2>
+      <div class="result-header-right">
+        <span class="word-count-badge" id="word-count-badge"></span>
+        <div class="result-actions">
+          <button class="copy-btn" onclick="copyBrief()">Copy</button>
+          <button class="export-btn" id="export-btn" onclick="downloadPdf()">Download PDF</button>
+        </div>
+      </div>
+    </div>
+    <div id="brief-output"></div>
+
+    <div id="remix-section" class="remix-section" style="display:none;">
+      <div class="remix-title">Remix this brief</div>
+      <div class="remix-group">
+        <div class="remix-group-label">Switch tone</div>
+        <div class="remix-chips" id="remix-tones"></div>
+      </div>
+      <div class="remix-group">
+        <div class="remix-group-label">Try a content style</div>
+        <div class="remix-chips" id="remix-styles"></div>
+      </div>
+    </div>
+
+    <div id="tweak-section" class="tweak-section" style="display:none;">
+      <div class="tweak-title">Refine this brief</div>
+      <div class="tweak-buttons">
+        <button class="tweak-btn" onclick="tweakBrief('Rewrite this campaign brief with bolder, more assertive language. Use stronger claims, more confident phrasing, and eliminate any hedging or passive voice.')">Make it bolder</button>
+        <button class="tweak-btn" onclick="tweakBrief('Condense this campaign brief to roughly half its current length. Keep all section headings but cut ruthlessly — only the most essential content per section.')">Make it shorter</button>
+        <button class="tweak-btn" onclick="tweakBrief('Rewrite this campaign brief with a stronger focus on a youth audience aged 16–25. Adjust the key messages, copy examples, content ideas, and platform strategy to resonate with younger people.')">Focus more on youth audience</button>
+        <button class="tweak-btn" onclick="tweakBrief('Reimagine this campaign brief with a completely fresh creative angle. Keep the organisation name and goal, but approach the campaign concept, hook, and messaging from a new direction.')">Try a different angle</button>
+      </div>
+      <button id="undo-btn" class="undo-btn" style="display:none;" onclick="undoTweak()">↩ Undo tweak</button>
+    </div>
+  </div>
+
+  <div class="visuals-card" id="visuals-card">
+    <div class="visuals-hdr">
+      <span class="visuals-title">Social Visuals</span>
+      <p class="visuals-sub">AI-generated images tailored for each platform</p>
+    </div>
+    <div class="visuals-grid" id="visuals-grid"></div>
+  </div>
+
+  <div class="resources-card" id="resources-card">
+    <div class="resources-title">Related Content</div>
+
+    <div id="search-suggestions">
+      <p class="suggest-loading">Finding related content...</p>
+    </div>
+
+    <hr class="resources-divider">
+    <div class="video-section-label">Add videos to your brief</div>
+    <div class="video-add-row">
+      <input type="text" class="video-url-input" id="video-url" placeholder="Paste a YouTube URL to embed...">
+      <button class="video-add-btn" onclick="addVideo()">Embed</button>
+    </div>
+    <div class="video-grid" id="video-grid"></div>
+  </div>
+
+</div>
+</div>
+
+<script>
+  document.querySelectorAll('.platform-btn').forEach(btn => {
+    btn.addEventListener('click', () => btn.classList.toggle('selected'));
+  });
+
+  function getSelectedPlatforms() {
+    return [...document.querySelectorAll('.platform-btn.selected')].map(b => b.dataset.platform);
+  }
+
+  // Example prefill
+  function prefill() {
+    document.getElementById('org_name').value = 'GreenSprout';
+    document.getElementById('cause').value = 'We connect urban schools with local farms to teach children where food comes from and reduce food insecurity in low-income communities.';
+    document.getElementById('audience').value = 'Parents and teachers in urban areas, aged 28–45';
+    document.getElementById('tone').value = 'Warm and community-focused';
+    document.getElementById('goal').value = 'Increase volunteer sign-ups by 30% this quarter';
+    document.querySelectorAll('.platform-btn').forEach(b => b.classList.remove('selected'));
+    ['Instagram', 'Email newsletter', 'Facebook'].forEach(name => {
+      document.querySelector(`.platform-btn[data-platform="${name}"]`)?.classList.add('selected');
+    });
+  }
+
+  // DOM-based markdown renderer — no user content ever touches innerHTML
+  function renderMarkdown(text) {
+    const frag = document.createDocumentFragment();
+    for (const line of text.split('\n')) {
+      if (line.startsWith('## ')) {
+        const el = document.createElement('h2');
+        el.textContent = line.slice(3);
+        frag.appendChild(el);
+      } else if (line.startsWith('### ')) {
+        const el = document.createElement('h3');
+        el.textContent = line.slice(4);
+        frag.appendChild(el);
+      } else if (line.startsWith('- ') || line.startsWith('* ')) {
+        const el = document.createElement('p');
+        el.className = 'bullet';
+        appendInline(el, '• ' + line.slice(2));
+        frag.appendChild(el);
+      } else if (/^\d+\.\s/.test(line)) {
+        const el = document.createElement('p');
+        el.className = 'numbered';
+        appendInline(el, line);
+        frag.appendChild(el);
+      } else if (line.trim() !== '') {
+        const el = document.createElement('p');
+        appendInline(el, line);
+        frag.appendChild(el);
+      }
+    }
+    return frag;
+  }
+
+  function appendInline(el, text) {
+    for (const part of text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/)) {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        const s = document.createElement('strong');
+        s.textContent = part.slice(2, -2);
+        el.appendChild(s);
+      } else if (part.startsWith('*') && part.endsWith('*')) {
+        const em = document.createElement('em');
+        em.textContent = part.slice(1, -1);
+        el.appendChild(em);
+      } else {
+        el.appendChild(document.createTextNode(part));
+      }
+    }
+  }
+
+  function showError(output, message) {
+    output.innerHTML = '';
+    const p = document.createElement('p');
+    p.className = 'error';
+    p.textContent = message;
+    output.appendChild(p);
+  }
+
+  // Remix data
+  const REMIX_TONES = [
+    { label: 'Inspiring & hopeful',      value: 'Inspiring and hopeful' },
+    { label: 'Urgent & direct',          value: 'Urgent and direct' },
+    { label: 'Warm & community-focused', value: 'Warm and community-focused' },
+    { label: 'Educational & informative',value: 'Educational and informative' },
+    { label: 'Bold & activist',          value: 'Bold and activist' },
+    { label: 'Conversational & friendly',value: 'Conversational and friendly' },
+  ];
+
+  const REMIX_STYLES = [
+    { label: 'Storytelling',   modifier: 'Lead each section with a real human story or scenario. Make it narrative and emotional before presenting the facts.' },
+    { label: 'Data-driven',    modifier: 'Lead each section with statistics and concrete evidence. Use specific numbers and cite credible sources where possible.' },
+    { label: 'Question-led',   modifier: 'Open each section with a thought-provoking question that draws the reader in before answering it.' },
+    { label: 'Minimalist',     modifier: 'Make everything shorter and punchier. Cut every unnecessary word. Fewer bullet points, more impact per sentence.' },
+  ];
+
+  let activeStyleChip = null;
+  let currentBriefText = '';
+  let previousBriefText = null;
+  let currentPersonas = null;
+  let currentOrgId = null;
+  let orgsCache = [];
+
+  function showRemixOptions(activeTone) {
+    const section = document.getElementById('remix-section');
+    const tonesEl = document.getElementById('remix-tones');
+    const stylesEl = document.getElementById('remix-styles');
+
+    tonesEl.innerHTML = '';
+    REMIX_TONES.forEach(t => {
+      const chip = document.createElement('button');
+      chip.className = 'remix-chip tone-chip' + (t.value === activeTone ? ' active' : '');
+      chip.textContent = t.label;
+      chip.addEventListener('click', () => {
+        document.getElementById('tone').value = t.value;
+        activeStyleChip = null;
+        generate();
+      });
+      tonesEl.appendChild(chip);
+    });
+
+    stylesEl.innerHTML = '';
+    activeStyleChip = null;
+    REMIX_STYLES.forEach(s => {
+      const chip = document.createElement('button');
+      chip.className = 'remix-chip style-chip';
+      chip.textContent = s.label;
+      chip.addEventListener('click', () => {
+        if (activeStyleChip) activeStyleChip.classList.remove('active');
+        chip.classList.add('active');
+        activeStyleChip = chip;
+        generate(s.modifier);
+      });
+      stylesEl.appendChild(chip);
+    });
+
+    section.style.display = 'block';
+  }
+
+  // Streaming generate
+  async function generate(styleModifier = '') {
+    const org_name  = document.getElementById('org_name').value.trim();
+    const cause     = document.getElementById('cause').value.trim();
+    const audience  = document.getElementById('audience').value.trim();
+    const tone      = document.getElementById('tone').value;
+    const goal      = document.getElementById('goal').value.trim();
+    const platforms = getSelectedPlatforms();
+
+    if (!org_name || !cause || !audience || !tone || !goal || platforms.length === 0) {
+      alert('Please fill in all fields and select at least one platform.');
+      return;
+    }
+
+    const btn = document.getElementById('generate-btn');
+    const resultCard = document.getElementById('result-card');
+    const output = document.getElementById('brief-output');
+
+    document.getElementById('remix-section').style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = 'Generating...';
+    resultCard.classList.add('visible');
+    output.innerHTML = '<div class="loading"><div class="spinner"></div> Claude is writing your brief...</div>';
+    resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    try {
+      const res = await fetch('/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ org_name, cause, audience, tone, goal, platforms, style_modifier: styleModifier, personas: currentPersonas || [], org_id: currentOrgId })
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        showError(output, data.error || 'Something went wrong. Please try again.');
+        return;
+      }
+
+      const reader     = res.body.getReader();
+      const decoder    = new TextDecoder();
+      const wordBadge  = document.getElementById('word-count-badge');
+      let fullText = '';
+
+      wordBadge.classList.add('visible');
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        fullText += decoder.decode(value, { stream: true });
+        output.innerHTML = '';
+        output.appendChild(renderMarkdown(fullText));
+        const words = fullText.trim().split(/\s+/).filter(Boolean).length;
+        wordBadge.textContent = `${words} words`;
+      }
+
+      wordBadge.textContent = `${fullText.trim().split(/\s+/).filter(Boolean).length} words`;
+
+      if (fullText.trim()) {
+        currentBriefText = fullText.trim();
+        previousBriefText = null;
+        document.getElementById('undo-btn').style.display = 'none';
+        prependBriefHeader(org_name, tone, platforms);
+        saveBrief(org_name, fullText.trim());
+        showRemixOptions(tone);
+        showTweakSection();
+        fetchVisuals(org_name, cause, tone, goal, platforms);
+        fetchSuggestions(org_name, cause, goal);
+        showToast('Brief saved to history');
+        fetch('/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ org_name, cause, audience, tone, goal, platforms, brief_text: fullText.trim() })
+        }).then(r => { if (r.ok) loadDbHistory(); }).catch(() => {});
+      }
+
+    } catch (e) {
+      showError(output, 'Network error. Make sure the server is running and try again.');
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Generate campaign brief';
+  }
+
+  // Brief history (localStorage, max 5)
+  function saveBrief(org, brief) {
+    const history = JSON.parse(localStorage.getItem('brief_history') || '[]');
+    history.unshift({
+      id: Date.now(),
+      org,
+      date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+      brief
+    });
+    localStorage.setItem('brief_history', JSON.stringify(history.slice(0, 5)));
+    renderHistory();
+  }
+
+  function renderHistory() {
+    const history = JSON.parse(localStorage.getItem('brief_history') || '[]');
+    const panel = document.getElementById('history-panel');
+    const list = document.getElementById('history-list');
+    if (history.length === 0) { panel.style.display = 'none'; return; }
+    panel.style.display = 'block';
+    list.innerHTML = '';
+    history.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'history-item';
+
+      const name = document.createElement('span');
+      name.className = 'history-item-name';
+      name.textContent = item.org;
+
+      const date = document.createElement('span');
+      date.className = 'history-item-date';
+      date.textContent = item.date;
+
+      div.appendChild(name);
+      div.appendChild(date);
+      div.addEventListener('click', () => {
+        const resultCard = document.getElementById('result-card');
+        const output = document.getElementById('brief-output');
+        resultCard.classList.add('visible');
+        output.innerHTML = '';
+        output.appendChild(renderMarkdown(item.brief));
+        resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+      list.appendChild(div);
+    });
+  }
+
+  function clearHistory() {
+    localStorage.removeItem('brief_history');
+    renderHistory();
+  }
+
+  // Copy
+  function copyBrief() {
+    const text = document.getElementById('brief-output').innerText;
+    const btn = document.querySelector('.copy-btn');
+    const confirm = () => {
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy', 2000);
+    };
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(confirm).catch(() => fallbackCopy(text, confirm));
+    } else {
+      fallbackCopy(text, confirm);
+    }
+  }
+
+  function fallbackCopy(text, callback) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;opacity:0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    callback();
+  }
+
+  function prependBriefHeader(orgName, tone, platforms) {
+    const output = document.getElementById('brief-output');
+    const old = output.querySelector('.brief-doc-header');
+    if (old) old.remove();
+
+    const header = document.createElement('div');
+    header.className = 'brief-doc-header';
+
+    const orgEl = document.createElement('div');
+    orgEl.className = 'brief-doc-org';
+    orgEl.textContent = orgName;
+
+    const metaEl = document.createElement('div');
+    metaEl.className = 'brief-doc-meta';
+
+    const toneEl = document.createElement('span');
+    toneEl.className = 'brief-doc-tone';
+    toneEl.textContent = tone;
+
+    const dateEl = document.createElement('span');
+    dateEl.className = 'brief-doc-date';
+    dateEl.textContent = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    metaEl.appendChild(toneEl);
+    metaEl.appendChild(dateEl);
+
+    const platEl = document.createElement('div');
+    platEl.className = 'brief-doc-platforms';
+    platEl.textContent = platforms.join(' · ');
+
+    header.appendChild(orgEl);
+    header.appendChild(metaEl);
+    header.appendChild(platEl);
+    output.insertBefore(header, output.firstChild);
+  }
+
+  function showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2800);
+  }
+
+  // Related content / video embeds
+  async function fetchSuggestions(orgName, cause, goal) {
+    const card      = document.getElementById('resources-card');
+    const suggestEl = document.getElementById('search-suggestions');
+    card.classList.add('visible');
+    suggestEl.innerHTML = '<p class="suggest-loading">Finding related content...</p>';
+
+    try {
+      const res  = await fetch('/suggestions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ org_name: orgName, cause, goal })
+      });
+      const { youtube = [], news = [], hashtags = [] } = await res.json();
+      suggestEl.innerHTML = '';
+
+      if (youtube.length) {
+        suggestEl.appendChild(makeStrip('YouTube', youtube.map(q => ({
+          text: q, cls: 'yt', prefix: '▶',
+          href: `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`
+        }))));
+      }
+      if (news.length) {
+        suggestEl.appendChild(makeStrip('Recent News', news.map(q => ({
+          text: q, cls: 'news', prefix: '→',
+          href: `https://news.google.com/search?q=${encodeURIComponent(q)}`
+        }))));
+      }
+      if (hashtags.length) {
+        suggestEl.appendChild(makeStrip('Hashtags', hashtags.map(h => ({
+          text: `#${h}`, cls: 'hash', prefix: '',
+          href: `https://twitter.com/search?q=${encodeURIComponent('#' + h)}&src=typed_query`
+        }))));
+      }
+    } catch (e) {
+      suggestEl.innerHTML = '';
+    }
+  }
+
+  function makeStrip(title, links) {
+    const section = document.createElement('div');
+    section.className = 'platform-section';
+
+    const lbl = document.createElement('div');
+    lbl.className = 'platform-label';
+    lbl.textContent = title;
+    section.appendChild(lbl);
+
+    const chips = document.createElement('div');
+    chips.className = 'suggest-chips';
+    links.forEach(({ text, cls, prefix, href }) => {
+      const a = document.createElement('a');
+      a.className = `suggest-chip ${cls}`;
+      a.href = href;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      if (prefix) {
+        const sp = document.createElement('span');
+        sp.className = 'chip-prefix';
+        sp.textContent = prefix;
+        a.appendChild(sp);
+      }
+      a.appendChild(document.createTextNode(text));
+      chips.appendChild(a);
+    });
+    section.appendChild(chips);
+    return section;
+  }
+
+  function extractYouTubeId(url) {
+    const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+    return m ? m[1] : null;
+  }
+
+  function addVideo() {
+    const input   = document.getElementById('video-url');
+    const videoId = extractYouTubeId(input.value.trim());
+    if (!videoId) {
+      alert('Please paste a valid YouTube URL (e.g. https://www.youtube.com/watch?v=...)');
+      return;
+    }
+    embedVideo(videoId);
+    input.value = '';
+  }
+
+  function embedVideo(videoId) {
+    const item = document.createElement('div');
+    item.className = 'video-item';
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'video-remove';
+    removeBtn.textContent = '×';
+    removeBtn.setAttribute('aria-label', 'Remove video');
+    removeBtn.addEventListener('click', () => item.remove());
+
+    const embed  = document.createElement('div');
+    embed.className = 'video-embed';
+
+    const iframe = document.createElement('iframe');
+    iframe.src = `https://www.youtube.com/embed/${videoId}`;
+    iframe.setAttribute('allowfullscreen', '');
+    iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
+    iframe.setAttribute('loading', 'lazy');
+
+    embed.appendChild(iframe);
+    item.appendChild(removeBtn);
+    item.appendChild(embed);
+    document.getElementById('video-grid').appendChild(item);
+
+    // Scroll resource card into view if first video
+    if (document.getElementById('video-grid').children.length === 1) {
+      document.getElementById('resources-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }
+
+  document.getElementById('video-url').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addVideo();
+  });
+
+  async function loadDbHistory() {
+    const list = document.getElementById('db-history-list');
+    try {
+      const res = await fetch('/history');
+      const briefs = await res.json();
+      list.innerHTML = '';
+      if (!briefs.length) {
+        const p = document.createElement('p');
+        p.className = 'sidebar-empty';
+        p.textContent = 'No saved briefs yet.';
+        list.appendChild(p);
+        return;
+      }
+      briefs.forEach(b => {
+        const item = document.createElement('div');
+        item.className = 'sidebar-item';
+
+        const name = document.createElement('div');
+        name.className = 'sidebar-item-name';
+        name.textContent = b.org_name;
+
+        const date = document.createElement('div');
+        date.className = 'sidebar-item-date';
+        date.textContent = new Date(b.created_at).toLocaleDateString('en-GB', {
+          day: 'numeric', month: 'short', year: 'numeric'
+        });
+
+        item.appendChild(name);
+        item.appendChild(date);
+        item.addEventListener('click', () => {
+          const resultCard = document.getElementById('result-card');
+          const output = document.getElementById('brief-output');
+          resultCard.classList.add('visible');
+          output.innerHTML = '';
+          output.appendChild(renderMarkdown(b.brief_text));
+          prependBriefHeader(b.org_name, b.tone, b.platforms ? b.platforms.split(',') : []);
+          currentBriefText = b.brief_text;
+          previousBriefText = null;
+          document.getElementById('undo-btn').style.display = 'none';
+          showTweakSection();
+          resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+        list.appendChild(item);
+      });
+    } catch (e) {
+      list.innerHTML = '<p class="sidebar-empty">Could not load history.</p>';
+    }
+  }
+
+  async function startGenerate() {
+    const org_name  = document.getElementById('org_name').value.trim();
+    const cause     = document.getElementById('cause').value.trim();
+    const audience  = document.getElementById('audience').value.trim();
+    const tone      = document.getElementById('tone').value;
+    const goal      = document.getElementById('goal').value.trim();
+    const platforms = getSelectedPlatforms();
+
+    if (!org_name || !cause || !audience || !tone || !goal || platforms.length === 0) {
+      alert('Please fill in all fields and select at least one platform.');
+      return;
+    }
+
+    const btn     = document.getElementById('generate-btn');
+    const section = document.getElementById('persona-section');
+    const loading = document.getElementById('persona-loading');
+    const content = document.getElementById('persona-content');
+
+    btn.disabled = true;
+    btn.textContent = 'Building personas...';
+    section.style.display = 'block';
+    loading.style.display = 'flex';
+    content.style.display = 'none';
+    section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    try {
+      const res  = await fetch('/personas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ org_name, cause, audience, tone, goal }),
+      });
+      const data = await res.json();
+      const list = data.personas || [];
+
+      if (list.length > 0) {
+        currentPersonas = list;
+        showPersonas(list);
+        btn.disabled = false;
+        btn.textContent = 'Generate campaign brief';
+      } else {
+        throw new Error('empty');
+      }
+    } catch (e) {
+      section.style.display = 'none';
+      currentPersonas = null;
+      btn.disabled = false;
+      btn.textContent = 'Generate campaign brief';
+      generate();
+    }
+  }
+
+  function showPersonas(list) {
+    const loading = document.getElementById('persona-loading');
+    const content = document.getElementById('persona-content');
+    const cards   = document.getElementById('persona-cards');
+    const colors  = ['#4F46E5', '#0D9488'];
+
+    cards.innerHTML = '';
+    list.forEach((p, i) => {
+      const card = document.createElement('div');
+      card.className = 'persona-card';
+
+      const avatar = document.createElement('div');
+      avatar.className = 'persona-avatar';
+      avatar.style.background = colors[i % colors.length];
+      avatar.textContent = p.name.charAt(0).toUpperCase();
+
+      const name = document.createElement('div');
+      name.className = 'persona-name';
+      name.textContent = `${p.name}, ${p.age}`;
+
+      card.appendChild(avatar);
+      card.appendChild(name);
+
+      [['Motivation', p.motivation], ['Barrier to action', p.barrier]].forEach(([label, value]) => {
+        const field = document.createElement('div');
+        field.className = 'persona-field';
+        const lbl = document.createElement('span');
+        lbl.className = 'persona-label';
+        lbl.textContent = label;
+        const val = document.createElement('span');
+        val.className = 'persona-value';
+        val.textContent = value;
+        field.appendChild(lbl);
+        field.appendChild(val);
+        card.appendChild(field);
+      });
+
+      cards.appendChild(card);
+    });
+
+    loading.style.display = 'none';
+    content.style.display = 'block';
+  }
+
+  function generateWithPersonas() {
+    document.getElementById('persona-section').style.display = 'none';
+    generate();
+  }
+
+  function skipPersonas() {
+    currentPersonas = null;
+    document.getElementById('persona-section').style.display = 'none';
+    generate();
+  }
+
+  async function fetchVisuals(org_name, cause, tone, goal, platforms) {
+    const card = document.getElementById('visuals-card');
+    const grid = document.getElementById('visuals-grid');
+
+    card.classList.add('visible');
+    grid.innerHTML = '';
+
+    const itemMap = {};
+    platforms.forEach(platform => {
+      const item = buildVisualItem(platform);
+      grid.appendChild(item.el);
+      itemMap[platform] = item;
+    });
+
+    try {
+      const res  = await fetch('/visuals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ org_name, cause, tone, goal, platforms, brief_text: currentBriefText }),
+      });
+      const data = await res.json();
+      const list = data.visuals || [];
+
+      list.forEach(v => {
+        const item = itemMap[v.platform];
+        if (item && v.prompt) loadVisualImage(item, v.prompt, v.platform);
+      });
+
+      platforms.forEach(p => {
+        if (!list.find(v => v.platform === p)) {
+          const item = itemMap[p];
+          if (item) item.spinnerWrap.innerHTML = '<span class="visual-error">Could not generate</span>';
+        }
+      });
+    } catch (e) {
+      Object.values(itemMap).forEach(item => {
+        item.spinnerWrap.innerHTML = '<span class="visual-error">Could not generate</span>';
+      });
+    }
+  }
+
+  function buildVisualItem(platform) {
+    const el = document.createElement('div');
+    el.className = 'visual-item';
+
+    const lbl = document.createElement('div');
+    lbl.className = 'visual-label';
+    lbl.textContent = platform;
+
+    const imgWrap = document.createElement('div');
+    imgWrap.className = 'visual-img-wrap';
+
+    const spinnerWrap = document.createElement('div');
+    spinnerWrap.className = 'visual-spinner-wrap';
+    const spinner = document.createElement('div');
+    spinner.className = 'spinner';
+    spinnerWrap.appendChild(spinner);
+    imgWrap.appendChild(spinnerWrap);
+
+    const dlBtn = document.createElement('button');
+    dlBtn.className = 'visual-dl-btn';
+    dlBtn.textContent = 'Download';
+    dlBtn.style.display = 'none';
+
+    el.appendChild(lbl);
+    el.appendChild(imgWrap);
+    el.appendChild(dlBtn);
+
+    return { el, imgWrap, spinnerWrap, dlBtn };
+  }
+
+  function loadVisualImage(item, prompt, platform) {
+    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=576&nologo=true`;
+    const img = document.createElement('img');
+    img.className = 'visual-img';
+    img.alt = `${platform} campaign visual`;
+    img.crossOrigin = 'anonymous';
+
+    img.onload = () => {
+      item.spinnerWrap.remove();
+      item.imgWrap.appendChild(img);
+      item.dlBtn.style.display = 'block';
+      item.dlBtn.addEventListener('click', () => downloadVisual(img, platform));
+    };
+
+    img.onerror = () => {
+      item.spinnerWrap.innerHTML = '<span class="visual-error">Image unavailable</span>';
+    };
+
+    img.src = url;
+  }
+
+  function downloadVisual(img, platform) {
+    const filename = platform.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '_visual.jpg';
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width  = img.naturalWidth  || 1024;
+      canvas.height = img.naturalHeight || 576;
+      canvas.getContext('2d').drawImage(img, 0, 0);
+      canvas.toBlob(blob => {
+        const a = document.createElement('a');
+        a.href     = URL.createObjectURL(blob);
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
+      }, 'image/jpeg', 0.92);
+    } catch (e) {
+      const a = document.createElement('a');
+      a.href   = img.src;
+      a.target = '_blank';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  }
+
+  async function downloadPdf() {
+    if (!currentBriefText) return;
+    const btn = document.getElementById('export-btn');
+    btn.textContent = 'Generating…';
+    btn.disabled = true;
+
+    try {
+      const res = await fetch('/export/pdf', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          brief_text: currentBriefText,
+          org_name:   document.getElementById('org_name').value.trim() || 'Campaign Brief',
+          tone:       document.getElementById('tone').value,
+          platforms:  getSelectedPlatforms(),
+        }),
+      });
+
+      if (!res.ok) {
+        showToast('PDF generation failed — check the server logs');
+        return;
+      }
+
+      const blob     = await res.blob();
+      const url      = URL.createObjectURL(blob);
+      const a        = document.createElement('a');
+      const orgName  = document.getElementById('org_name').value.trim() || 'campaign';
+      a.href         = url;
+      a.download     = orgName.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '_brief.pdf';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('PDF downloaded');
+    } catch (e) {
+      showToast('PDF export failed — make sure the server is running');
+    }
+
+    btn.textContent = 'Download PDF';
+    btn.disabled    = false;
+  }
+
+  function showTweakSection() {
+    document.getElementById('tweak-section').style.display = 'block';
+  }
+
+  async function tweakBrief(instruction) {
+    if (!currentBriefText) return;
+
+    previousBriefText = currentBriefText;
+
+    const output   = document.getElementById('brief-output');
+    const undoBtn  = document.getElementById('undo-btn');
+    const tweakBtns = document.querySelectorAll('.tweak-btn');
+
+    tweakBtns.forEach(b => b.disabled = true);
+    undoBtn.style.display = 'none';
+    output.innerHTML = '<div class="loading"><div class="spinner"></div> Refining your brief...</div>';
+
+    try {
+      const res = await fetch('/tweak', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brief_text: currentBriefText, instruction })
+      });
+
+      if (!res.ok) {
+        showError(output, 'Tweak failed. Please try again.');
+        tweakBtns.forEach(b => b.disabled = false);
+        return;
+      }
+
+      const reader  = res.body.getReader();
+      const decoder = new TextDecoder();
+      let newText   = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        newText += decoder.decode(value, { stream: true });
+        output.innerHTML = '';
+        output.appendChild(renderMarkdown(newText));
+      }
+
+      if (newText.trim()) {
+        currentBriefText = newText.trim();
+        undoBtn.style.display = 'inline-block';
+      }
+    } catch (e) {
+      showError(output, 'Network error during tweak. Please try again.');
+    }
+
+    tweakBtns.forEach(b => b.disabled = false);
+  }
+
+  function undoTweak() {
+    if (!previousBriefText) return;
+    const output = document.getElementById('brief-output');
+    output.innerHTML = '';
+    output.appendChild(renderMarkdown(previousBriefText));
+    currentBriefText  = previousBriefText;
+    previousBriefText = null;
+    document.getElementById('undo-btn').style.display = 'none';
+  }
+
+  async function loadOrgsDropdown() {
+    try {
+      const res = await fetch('/orgs');
+      orgsCache = await res.json();
+      const sel  = document.getElementById('org-select');
+      const prev = sel.value;
+      sel.innerHTML = '<option value="">— Select to auto-fill —</option>';
+      orgsCache.forEach(o => {
+        const opt = document.createElement('option');
+        opt.value       = o.id;
+        opt.textContent = o.name;
+        sel.appendChild(opt);
+      });
+      if (prev) sel.value = prev;
+    } catch (e) {}
+  }
+
+  function loadOrgProfile() {
+    const sel = document.getElementById('org-select');
+    const id  = parseInt(sel.value);
+    if (!id) { currentOrgId = null; return; }
+    const org = orgsCache.find(o => o.id === id);
+    if (!org) return;
+    currentOrgId = org.id;
+    if (org.name)            document.getElementById('org_name').value = org.name;
+    if (org.mission)         document.getElementById('cause').value    = org.mission;
+    if (org.target_audience) document.getElementById('audience').value = org.target_audience;
+  }
+
+  // Init
+  renderHistory();
+  loadDbHistory();
+  loadOrgsDropdown();
+</script>
+<div class="toast" id="toast"></div>
+</body>
+</html>
